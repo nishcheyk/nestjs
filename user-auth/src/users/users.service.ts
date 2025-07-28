@@ -1,30 +1,87 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as bcrypt from 'bcryptjs';
+
 import { User } from './user.schema';
-import * as bcrypt from "bcryptjs";
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
+ 
   async create(username: string, password: string): Promise<User> {
     const hash = await bcrypt.hash(password, 10);
     const user = new this.userModel({ username, password: hash });
-    return user.save();
+    const savedUser = await user.save();
+
+    const userObj = savedUser.toObject();
+    const cacheKeyById = `user:${userObj._id}`;
+    const cacheKeyByUsername = `user:username:${userObj.username}`;
+
+    try {
+      await this.cacheManager.set(cacheKeyById, userObj, 3600);           // Cache TTL 1 hour
+      await this.cacheManager.set(cacheKeyByUsername, userObj, 3600);
+    } catch (error) {
+      console.error('Cache set error:', error);
+    }
+
+    return userObj;
   }
 
   async findOne(username: string): Promise<User | null> {
-    return this.userModel.findOne({ username });
+    const cacheKeyByUsername = `user:username:${username}`;
+    try {
+      const cachedUser = await this.cacheManager.get<User>(cacheKeyByUsername);
+      if (cachedUser) {
+        console.log(`Cache HIT for key ${cacheKeyByUsername}`);
+        return cachedUser;
+      }
+      console.log(`Cache MISS for key ${cacheKeyByUsername}`);
+    } catch (error) {
+      console.error('Cache get error:', error);
+    }
+
+    const user = await this.userModel.findOne({ username });
+    if (user) {
+      const userObj = user.toObject();
+      const cacheKeyById = `user:${userObj._id}`;
+      try {
+        await this.cacheManager.set(cacheKeyByUsername, userObj, 3600);
+        await this.cacheManager.set(cacheKeyById, userObj, 3600);
+        console.log(`Cached user data with keys: ${cacheKeyByUsername}, ${cacheKeyById}`);
+      } catch (error) {
+        console.error('Cache set error:', error);
+      }
+      return userObj;
+    }
+
+    return null;
   }
 
   async validateUser(username: string, password: string): Promise<boolean> {
     const user = await this.findOne(username);
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       return true;
     }
     return false;
+  }
+
+  
+  async invalidateCache(userId: string, username: string): Promise<void> {
+    const cacheKeyById = `user:${userId}`;
+    const cacheKeyByUsername = `user:username:${username}`;
+
+    try {
+      await this.cacheManager.del(cacheKeyById);
+      await this.cacheManager.del(cacheKeyByUsername);
+    } catch (error) {
+      console.error('Cache invalidation error:', error);
+    }
   }
 }
