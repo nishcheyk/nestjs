@@ -40,6 +40,7 @@ export const api = createApi({
         body: credentials,
       }),
     }),
+    
     getProfile: builder.query<ApiResponse<User>, void>({
       query: () => ({
         url: "/users/profile",
@@ -47,13 +48,15 @@ export const api = createApi({
       }),
       providesTags: ["User"],
     }),
+    
     logout: builder.mutation<ApiResponse<void>, void>({
       query: () => ({
         url: "/auth/logout",
         method: "POST",
       }),
     }),
+    
   }),
 });
 
-export const { useSignupMutation, useLoginMutation, useGetProfileQuery, useLogoutMutation } = api;
+export const {  useSignupMutation, useLoginMutation, useGetProfileQuery, useLogoutMutation } = api;

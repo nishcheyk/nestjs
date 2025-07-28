@@ -31,6 +31,11 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   getProfile(@Request() req) {
-    return req.user;
+    return {
+      success: true,
+      message: 'User profile fetched',
+      data: req.user,
+    };
   }
+  
 }

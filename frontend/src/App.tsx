@@ -5,6 +5,7 @@ import BasicLayout from "./layouts/Basic";
 import Home from "./pages/DashboardPage";
 import Login from "./pages/LoginPage";
 import Register from "./pages/RegisterPage";
+import ProfilePage from "./pages/ profile";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <Route element={<AuthenticatedLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Home />} />
+        <Route path="/profile" element={<ProfilePage />} />
         {/* Add more authenticated routes later */}
       </Route>
       <Route element={<BasicLayout />}>
