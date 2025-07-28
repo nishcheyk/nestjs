@@ -14,7 +14,7 @@ export class UsersService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
- 
+  // Create a new user and cache their data under two keys: id and username
   async create(username: string, password: string): Promise<User> {
     const hash = await bcrypt.hash(password, 10);
     const user = new this.userModel({ username, password: hash });
@@ -25,8 +25,9 @@ export class UsersService {
     const cacheKeyByUsername = `user:username:${userObj.username}`;
 
     try {
-      await this.cacheManager.set(cacheKeyById, userObj, 3600);           // Cache TTL 1 hour
+      await this.cacheManager.set(cacheKeyById, userObj, 3600);
       await this.cacheManager.set(cacheKeyByUsername, userObj, 3600);
+      console.log(`Cached new user: ${cacheKeyByUsername} and ${cacheKeyById}`);
     } catch (error) {
       console.error('Cache set error:', error);
     }
@@ -34,6 +35,7 @@ export class UsersService {
     return userObj;
   }
 
+  // Find user by username, first from cache, then DB if missing, and cache the result
   async findOne(username: string): Promise<User | null> {
     const cacheKeyByUsername = `user:username:${username}`;
     try {
@@ -47,6 +49,7 @@ export class UsersService {
       console.error('Cache get error:', error);
     }
 
+    // Cache miss fallback to DB
     const user = await this.userModel.findOne({ username });
     if (user) {
       const userObj = user.toObject();
@@ -64,6 +67,7 @@ export class UsersService {
     return null;
   }
 
+  // Validate password matches
   async validateUser(username: string, password: string): Promise<boolean> {
     const user = await this.findOne(username);
     if (user && (await bcrypt.compare(password, user.password))) {
@@ -72,7 +76,7 @@ export class UsersService {
     return false;
   }
 
-  
+  // Invalidate both cache entries if user updates or deleted
   async invalidateCache(userId: string, username: string): Promise<void> {
     const cacheKeyById = `user:${userId}`;
     const cacheKeyByUsername = `user:username:${username}`;
