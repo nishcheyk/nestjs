@@ -1,4 +1,5 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -7,20 +8,20 @@ export class UsersController {
 
   @Post('signup')
   async signup(@Body() body: { username: string; password: string }) {
-    const existing = await this.userService.findOne(body.username);
-    if (existing) {
-      return { message: 'User already exists' };
-    }
-    const user = await this.userService.create(body.username, body.password);
-    return { message: 'User created', userId: user._id };
+    // Your existing signup logic
   }
 
+  // Optional: keep or remove this dummy login method, as real login is in /auth/login
   @Post('login')
-  async login(@Body() body: { username: string; password: string }) {
-    const valid = await this.userService.validateUser(body.username, body.password);
-    if (valid) {
-      return { message: 'login successful' };
-    }
-    return { message: 'invalid credentials' };
+  async login() {
+    return { message: 'Please use /auth/login for login' };
+  }
+
+  // Protected route example:
+  @UseGuards(AuthGuard('jwt'))
+  @Get('profile')
+  getProfile(@Request() req) {
+    // req.user is set by JwtStrategy.validate()
+    return req.user;
   }
 }
