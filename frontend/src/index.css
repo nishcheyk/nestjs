@@ -1,0 +1,27 @@
+/* index.css */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;  /* no horizontal scrollbar */
+  overflow-y: auto;    /* vertical scrollbar if needed */
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #fff;
+  color: #000;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* You can add some base styles if needed, e.g., links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover, a:focus {
+  text-decoration: underline;
+}
