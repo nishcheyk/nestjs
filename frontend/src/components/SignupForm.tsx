@@ -51,17 +51,26 @@ export function SignupForm() {
     setShowConfirmPassword((prev) => !prev);
   };
 
+ 
   const onSubmit = async (data: FormData) => {
-    try {
-      await registerUser(data).unwrap();
-      toast.success("User registered successfully!");
-      navigate("/login");
+       try {
+         await registerUser(data).unwrap();
+         toast.success("User registered successfully!");
+         navigate("/login");
     } catch (error: any) {
+     
+      if (error?.status === 429) {
+        toast.error("Too many login attempts. Please try again after 5 minutes.");
+        return;
+      }
+  
       const validationError =
         error?.data?.data?.errors?.[0]?.msg || error?.data?.message;
-      toast.error(validationError || "Registration failed. Please try again.");
+  
+      toast.error(validationError || "Login failed. Please check your credentials.");
     }
   };
+  
 
   return (
     <div className="form-container">

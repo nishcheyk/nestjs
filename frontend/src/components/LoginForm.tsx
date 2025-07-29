@@ -40,7 +40,7 @@ export default function LoginForm() {
     },
   });
 
-  // State to toggle show/hide password
+  
   const [showPassword, setShowPassword] = useState(false);
 
   const toggleShowPassword = () => {
@@ -53,13 +53,19 @@ export default function LoginForm() {
       toast.success("User logged in successfully!");
       navigate("/dashboard");
     } catch (error: any) {
+      // Check if error is 429 Too Many Requests
+      if (error?.status === 429) {
+        toast.error("Too many login attempts. Please try again after 5 minutes.");
+        return;
+      }
+  
       const validationError =
         error?.data?.data?.errors?.[0]?.msg || error?.data?.message;
-      toast.error(
-        validationError || "Login failed. Please check your credentials."
-      );
+  
+      toast.error(validationError || "Login failed. Please check your credentials.");
     }
   };
+  
 
   return (
     <div className="form-container">

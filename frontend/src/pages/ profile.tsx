@@ -19,7 +19,7 @@ export default function ProfilePage() {
   if (error) {
     let message = "Error loading profile. Please try again later.";
     if ("status" in error) {
-      // @ts-ignore
+
       message = `Error ${error.status}: ${error.data?.message || message}`;
     }
     return <p>{message}</p>;
@@ -50,14 +50,10 @@ export default function ProfilePage() {
     alignItems: "center",
   }}
 >
-
-
-    
       <div className="card">
         <p className="heading">User Info</p>
         <p>
         <strong>ID:</strong> {user._id ?? user.userId ?? "N/A"}
-
         </p>
         <p>
           <strong>Email:</strong> {user.email}
