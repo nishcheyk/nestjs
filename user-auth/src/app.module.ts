@@ -15,7 +15,7 @@ import { AuthModule } from './auth/auth.module';
       ttl: 3600,
       isGlobal: true,
     }),
-    MongooseModule.forRoot('mongodb://localhost:27017/nesttest'),
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://mongo:27017/nesttest'),
     UsersModule,
     AuthModule,
   ],
