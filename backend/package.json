@@ -28,6 +28,8 @@
     "rate-limit-redis": "^4.2.1",
     "rate-limiter-flexible": "^7.2.0",
     "redis": "^5.6.1",
+    "socket": "^1.0.75",
+    "socket.io": "^4.8.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
@@ -41,6 +43,8 @@
     "@types/mongoose": "^5.11.96",
     "@types/swagger-ui-express": "^4.1.8",
     "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }

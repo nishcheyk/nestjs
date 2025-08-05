@@ -15,16 +15,17 @@ export class UserService {
     const newUser = new UserModel({ username, passwordHash });
     return newUser.save();
   }
-
-  async validateUser(username: string, password: string): Promise<IUser> {
+  
+  async validateUser(username: string, password: string): Promise<IUser | null> {
     const user = await UserModel.findOne({ username });
-    if (!user) throw new Error('Invalid credentials');
-
+    if (!user) return null; // no user found
+  
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new Error('Invalid credentials');
-
+    if (!valid) return null; // password mismatch
+  
     return user;
   }
+  
 
   async login(user: IUser) {
     const userId = (user._id as Types.ObjectId).toString();

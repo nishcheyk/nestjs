@@ -1,26 +1,19 @@
 import { useEffect, useRef, useCallback } from "react";
 
-const INACTIVITY_LIMIT_MS = 15* 1000; // 15 minutes
+const INACTIVITY_LIMIT_MS = 15*60 * 1000; // 20 seconds
 
-const WARNING_1_MS = 10* 60* 1000; // 10 minutes
-const WARNING_2_MS = 5 * 60 * 1000;  // 5 minutes after warning 1
-const FINAL_COUNTDOWN_SEC = 10;      // 10 seconds final countdown
+const WARNING_1_MS = 10*60 * 1000; // Warning at 15 seconds elapsed (5 seconds left)
+const WARNING_2_MS = 5*60 * 1000; // Warning at 12 seconds elapsed (8 seconds left)
+const FINAL_COUNTDOWN_SEC = 10; // 10 seconds countdown
 
 interface InactivityCallbacks {
   onWarning1?: () => void;
   onWarning2?: () => void;
   onFinalCountdownTick?: (secondsRemaining: number) => void;
   onInactive: () => void;
-  onReset?: () => void; // Called when timer resets (optional)
+  onReset?: () => void;
 }
 
-function formatMsToMinutesSeconds(ms: number) {
-  const totalSeconds = Math.ceil(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (num: number) => num.toString().padStart(2, "0");
-  return `${pad(minutes)}:${pad(seconds)}`;
-}
 
 export function useInactivityTimer({
   onWarning1,
@@ -32,9 +25,8 @@ export function useInactivityTimer({
   const timer = useRef<NodeJS.Timeout | null>(null);
   const warning1Timer = useRef<NodeJS.Timeout | null>(null);
   const warning2Timer = useRef<NodeJS.Timeout | null>(null);
-  const finalCountdownInterval = useRef<NodeJS.Timeout | null>(null);
   const finalCountdownTimeout = useRef<NodeJS.Timeout | null>(null);
-  const countdownLoggerInterval = useRef<NodeJS.Timeout | null>(null);
+  const finalCountdownInterval = useRef<NodeJS.Timeout | null>(null);
   const targetTime = useRef<number>(Date.now() + INACTIVITY_LIMIT_MS);
 
   const clearAllTimers = () => {
@@ -50,17 +42,13 @@ export function useInactivityTimer({
       clearTimeout(warning2Timer.current);
       warning2Timer.current = null;
     }
-    if (finalCountdownInterval.current) {
-      clearInterval(finalCountdownInterval.current);
-      finalCountdownInterval.current = null;
-    }
     if (finalCountdownTimeout.current) {
       clearTimeout(finalCountdownTimeout.current);
       finalCountdownTimeout.current = null;
     }
-    if (countdownLoggerInterval.current) {
-      clearInterval(countdownLoggerInterval.current);
-      countdownLoggerInterval.current = null;
+    if (finalCountdownInterval.current) {
+      clearInterval(finalCountdownInterval.current);
+      finalCountdownInterval.current = null;
     }
   };
 
@@ -70,59 +58,51 @@ export function useInactivityTimer({
     const now = Date.now();
     targetTime.current = now + INACTIVITY_LIMIT_MS;
 
+    // Log current local time and reset info
+    console.log(`Inactivity timer reset at: ${new Date().toLocaleTimeString()}`);
+
     if (onReset) onReset();
 
-    // Warning 1 at 14 minutes
-    warning2Timer.current = setTimeout(() => {
-      if (onWarning2) onWarning2();
-    }, WARNING_2_MS); // 5 minutes elapsed
-    
+    // Warning 1 timer
     warning1Timer.current = setTimeout(() => {
+      console.log(`Warning 1 triggered at: ${new Date().toLocaleTimeString()}`);
       if (onWarning1) onWarning1();
-    }, WARNING_1_MS); // 10 minutes elapsed
-    
+    }, INACTIVITY_LIMIT_MS - WARNING_1_MS);
 
-    // Start inactivity logout timeout
+    // Warning 2 timer
+    warning2Timer.current = setTimeout(() => {
+      console.log(`Warning 2 triggered at: ${new Date().toLocaleTimeString()}`);
+      if (onWarning2) onWarning2();
+    }, INACTIVITY_LIMIT_MS - WARNING_2_MS);
+
+    // Logout timer - delayed by 1 second compared to countdown end to avoid race conditions
     timer.current = setTimeout(() => {
-      if (finalCountdownInterval.current) {
-        clearInterval(finalCountdownInterval.current);
-        finalCountdownInterval.current = null;
-      }
-      if (countdownLoggerInterval.current) {
-        clearInterval(countdownLoggerInterval.current);
-        countdownLoggerInterval.current = null;
-      }
+      console.log(`Logout triggered at: ${new Date().toLocaleTimeString()}`);
+      clearAllTimers();
       onInactive();
-    }, INACTIVITY_LIMIT_MS);
+    }, INACTIVITY_LIMIT_MS + 1000);
 
-    // Start 10-second final countdown 10 seconds before logout
+    // Final countdown timer
     finalCountdownTimeout.current = setTimeout(() => {
       let secondsRemaining = FINAL_COUNTDOWN_SEC;
+
       if (finalCountdownInterval.current) {
         clearInterval(finalCountdownInterval.current);
       }
+
       finalCountdownInterval.current = setInterval(() => {
-        if (secondsRemaining <= 0) {
+        if (secondsRemaining === 0) {
           if (finalCountdownInterval.current) {
             clearInterval(finalCountdownInterval.current);
             finalCountdownInterval.current = null;
           }
           return;
         }
+        console.log(`Final countdown tick: ${secondsRemaining} second(s) remaining at ${new Date().toLocaleTimeString()}`);
         if (onFinalCountdownTick) onFinalCountdownTick(secondsRemaining);
         secondsRemaining -= 1;
       }, 1000);
     }, INACTIVITY_LIMIT_MS - FINAL_COUNTDOWN_SEC * 1000);
-
-    // Log countdown every second to console in MM:SS format
-    countdownLoggerInterval.current = setInterval(() => {
-      const remaining = targetTime.current - Date.now();
-      if (remaining <= 0) {
-        clearAllTimers();
-        return;
-      }
-      console.log(`Inactivity timer remaining: ${formatMsToMinutesSeconds(remaining)}`);
-    }, 1000);
   }, [onWarning1, onWarning2, onFinalCountdownTick, onInactive, onReset]);
 
   useEffect(() => {

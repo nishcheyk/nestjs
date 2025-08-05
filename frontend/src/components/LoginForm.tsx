@@ -59,31 +59,18 @@ export default function LoginForm() {
   const onSubmit = async (data: FormData) => {
     try {
       const result = await loginUser(data).unwrap();
-
-
-
-      // Since your backend returns tokens directly, check for tokens directly
+  
       if (result.accessToken && result.refreshToken && result.userId) {
-        // Save tokens and user info in localStorage
         localStorage.setItem("accessToken", result.accessToken);
         localStorage.setItem("refreshToken", result.refreshToken);
         localStorage.setItem("userId", result.userId);
-
-        // Optionally save sessionId if exists
         if ((result as any).sessionId) {
           localStorage.setItem("sessionId", (result as any).sessionId);
         }
-
-        // Update global Redux auth state - very important for route protection and navigation
         dispatch(setAccessToken(result.accessToken));
         dispatch(setAuthenticated(true));
-
         toast.success("User logged in successfully!");
-
-        // Navigate to dashboard once, with replace: true to prevent going back to login
         navigate("/dashboard", { replace: true });
-
-
       } else if ("message" in result) {
         toast.error(result.message);
       } else {
@@ -91,23 +78,24 @@ export default function LoginForm() {
       }
     } catch (error: any) {
       console.error("Login error", error);
-
+  
       if (error?.status === 429) {
         toast.error("Too many login attempts. Please try again after 5 minutes.");
         return;
       }
-
-      // Try extracting validation or general error msgs from various error shapes
+  
+      // Extract message safely using nested checks and fallback strings
       const validationError =
-        error?.data?.data?.errors?.[0]?.msg ||
-        error?.data?.message ||
-        error?.error ||
-        error?.message ||
+        error?.data?.data?.errors?.[0]?.msg ||  // validation error from backend
+        error?.data?.message ||                  // general message from backend
+        error?.error ||                          // RTK Query client error
+        error?.message ||                        // JS Error message
         "Login failed. Please check your credentials.";
-
+  
       toast.error(validationError);
     }
   };
+  
 
   return (
     <div className="form-container">

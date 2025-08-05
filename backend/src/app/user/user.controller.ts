@@ -27,17 +27,30 @@ router.post(
   }),
 );
 
+
 router.post(
   '/login',
-  rateLimiterMiddleware,
+ // rateLimiterMiddleware,
   asyncHandler(async (req: Request, res: Response) => {
     const dto = plainToInstance(LoginUserDto, req.body);
     await validateDto(dto);
+
     const user = await userService.validateUser(dto.username, dto.password);
+
+    if (!user) {
+      res.status(401).json({ message: "Invalid username or password" });
+      return;  
+    }
+
     const tokens = await userService.login(user);
+
     res.json(tokens);
+    // no return here
   }),
 );
+
+
+
 
 router.post(
   '/refresh',

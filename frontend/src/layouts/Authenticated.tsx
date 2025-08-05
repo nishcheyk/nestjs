@@ -15,9 +15,11 @@ export default function AuthenticatedLayout() {
   const navigate = useNavigate();
   const userId = localStorage.getItem('userId') ?? '';
   const accessToken = localStorage.getItem('accessToken') ?? '';
-  
 
-  
+  const warning1ToastId = "warning1-toast";
+  const warning2ToastId = "warning2-toast";
+  const countdownToastId = "countdown-toast";
+
   const handleLogout = useCallback(async () => {
     try {
       await logoutUser({ userId, accessToken }).unwrap();
@@ -34,21 +36,16 @@ export default function AuthenticatedLayout() {
 
       navigate("/login", { replace: true });
     }
-  }, [dispatch, logoutUser, navigate]);
+  }, [dispatch, logoutUser, navigate, userId, accessToken]);
 
   const handleLogoutOnInactive = useCallback(() => {
-    toast.dismiss(); // remove all toasts
+    toast.dismiss(); // Dismiss all toasts on logout
     handleLogout();
   }, [handleLogout]);
 
-  // Toast IDs for warnings so we can control lifetime or dismiss manually
-  const warning1ToastId = "warning1-toast";
-  const warning2ToastId = "warning2-toast";
-  const countdownToastId = "countdown-toast";
-
-  // Show warning 1 toast (stays ~15 sec)
+  // Warning 1 toast (10 minutes remaining) - auto closes after 15 seconds
   const handleWarning1 = useCallback(() => {
-    toast.warn(
+    toast.dark(
       "You have been inactive for 10 minutes. Please interact to stay logged in.",
       {
         toastId: warning1ToastId,
@@ -60,12 +57,12 @@ export default function AuthenticatedLayout() {
     );
   }, []);
 
-  // Show warning 2 toast (last 5 minutes, stays until cleared)
+  // Warning 2 toast (5 minutes remaining) - stays visible until user interacts or logout
   const handleWarning2 = useCallback(() => {
     if (!toast.isActive(warning2ToastId)) {
       toast.warn("5 minutes remaining before automatic logout due to inactivity.", {
         toastId: warning2ToastId,
-        autoClose: false, // stay until dismissed
+        autoClose: (5*60*1000)-10,  // stay for 14 min 50 sec
         closeButton: true,
         pauseOnHover: true,
         draggable: true,
@@ -73,17 +70,20 @@ export default function AuthenticatedLayout() {
     }
   }, []);
 
+  // Final countdown toast update
   const handleFinalCountdownTick = useCallback((secondsRemaining: number) => {
+    const secondsStr = `${secondsRemaining} second${secondsRemaining !== 1 ? "s" : ""}`;
+
     toast.update(countdownToastId, {
-      render: `Logging out in ${secondsRemaining} second${secondsRemaining !== 1 ? "s" : ""} due to inactivity.`,
+      render: `Logging out in ${secondsStr} due to inactivity.`,
       autoClose: false,
       closeButton: false,
       pauseOnHover: false,
       draggable: false,
-      // to keep toast visible during countdown
     });
+
     if (!toast.isActive(countdownToastId)) {
-      toast.info(`Logging out in ${secondsRemaining} seconds due to inactivity.`, {
+      toast.error(`Logging out in ${secondsStr} due to inactivity.`, {
         toastId: countdownToastId,
         autoClose: false,
         closeButton: false,
@@ -93,12 +93,13 @@ export default function AuthenticatedLayout() {
     }
   }, []);
 
-  // Reset and clear toasts on any user activity
+  // Clears all toasts on user activity to prevent stuck notifications
   const handleReset = useCallback(() => {
-    toast.dismiss([warning1ToastId, warning2ToastId, countdownToastId]);
+    [warning1ToastId, warning2ToastId, countdownToastId].forEach((id) => toast.dismiss(id));
   }, []);
 
-  const inactivityTimer = useInactivityTimer({
+  // Initialize inactivity timer with callbacks
+  useInactivityTimer({
     onWarning1: handleWarning1,
     onWarning2: handleWarning2,
     onFinalCountdownTick: handleFinalCountdownTick,
@@ -168,3 +169,4 @@ export default function AuthenticatedLayout() {
     </>
   );
 }
+
